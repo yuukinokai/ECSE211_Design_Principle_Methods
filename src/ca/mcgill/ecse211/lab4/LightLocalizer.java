@@ -1,5 +1,6 @@
 package ca.mcgill.ecse211.lab4;
 
+import ca.mcgill.ecse211.odometer.*;
 import lejos.hardware.*;
 import lejos.robotics.SampleProvider;
 
@@ -17,15 +18,16 @@ public class LightLocalizer {
 	private float[] colourData;
 	
 	private static int ROTATE_SPEED = 90;
-	private static double SENSOR_DISTANCE = 7;
+	private static double SENSOR_DISTANCE = 3.2;
 	
 
 	
 	/**
 	 * Constructor
+	 * @throws OdometerExceptions 
 	 */
-	public LightLocalizer(Odometer odo, SampleProvider cSensor, float[] cData, Navigation nav) {
-		this.odometer = odo;
+	public LightLocalizer(SampleProvider cSensor, float[] cData, Navigation nav) throws OdometerExceptions {
+		this.odometer = Odometer.getOdometer();
 		this.colourSensor = cSensor;
 		this.colourData = cData;
 		this.navigation = nav;
@@ -51,8 +53,8 @@ public class LightLocalizer {
 	 * correct x and y position
 	 */
 	private void correctPosition() {
-		double deltaY = (angleData[3] - angleData[1]);
-		double deltaX = (angleData[2] - angleData[0]);
+		double deltaY = (angleData[2] - angleData[0]);
+		double deltaX = (angleData[3] - angleData[1]);
 		
 		double xPosition = SENSOR_DISTANCE * Math.cos(Math.PI*deltaX/(2*180));
 		double yPosition = SENSOR_DISTANCE * Math.cos(Math.PI*deltaY/(2*180));
@@ -65,6 +67,7 @@ public class LightLocalizer {
 	 * collect angles at which the lines are
 	 */
 	private void collectAngleData() {
+		//rotate counterclockwise
 		navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
 		int count = 0;
 		while(count != 4) {

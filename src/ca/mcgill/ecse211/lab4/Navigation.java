@@ -26,6 +26,7 @@ public class Navigation {
 
 	// private double newheading;
 	private final static int FORWARD_SPEED = 120;
+	private final static int ROTATE_SPEED = 50;
 
 	private final static double TILE_SIZE = 30.48;
 
@@ -51,7 +52,8 @@ public class Navigation {
 	}
 
 	/**
-	 * @return if the robot is navigating
+	 * check if the robot is navigating
+	 * @return
 	 */
 	public boolean isNavigating(){
 
@@ -60,23 +62,15 @@ public class Navigation {
 	}
 
 	/**
-	 * This method makes the robot to back and forth a maximum distance
+	 * This method makes the robot go forward by one tile size
 	 * 
 	 */
 	public void moveForward(){
 		stop();
 		leftMotor.setSpeed(FORWARD_SPEED);
 		rightMotor.setSpeed(FORWARD_SPEED);
-		while(true) {
-			//go forward
-			leftMotor.rotate(convertDistance(wheelRadius, TILE_SIZE*2 - 5), true);
-			rightMotor.rotate(convertDistance(wheelRadius, TILE_SIZE*2 - 5), false);
-			
-			
-			//go backward in case the light sensor missed the line
-			leftMotor.rotate(-convertDistance(wheelRadius, TILE_SIZE*2 - 5), true);
-			rightMotor.rotate(-convertDistance(wheelRadius, TILE_SIZE*2 - 5), false);
-		}
+		leftMotor.rotate(convertDistance(wheelRadius, TILE_SIZE), true);
+		rightMotor.rotate(convertDistance(wheelRadius, TILE_SIZE), true);
 
 	}
 
@@ -90,28 +84,13 @@ public class Navigation {
 		rightMotor.setSpeed(FORWARD_SPEED);
 		
 		//go left or right
-		if(dx > 1) {
-			turnTo(90);
-			leftMotor.rotate(convertDistance(wheelRadius, Math.abs(dx)), true);
-			rightMotor.rotate(convertDistance(wheelRadius, Math.abs(dx)), false);
-		}
-		else if(dx < -1) {
-			turnTo(270);
-			leftMotor.rotate(convertDistance(wheelRadius, Math.abs(dx)), true);
-			rightMotor.rotate(convertDistance(wheelRadius, Math.abs(dx)), false);
-		}
+		turnTo(90);
+		leftMotor.rotate(convertDistance(wheelRadius, dx), true);
+		rightMotor.rotate(convertDistance(wheelRadius, dx), false);
 
-		//go up or down
-		if(dy > 1) {
-			turnTo(0);
-			leftMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), true);
-			rightMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), false);
-		}
-		else if(dy < -1) {
-			turnTo(180);
-			leftMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), true);
-			rightMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), false);
-		}
+		turnTo(0);
+		leftMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), true);
+		rightMotor.rotate(convertDistance(wheelRadius, Math.abs(dy)), false);
 
 	}
 
@@ -148,6 +127,8 @@ public class Navigation {
 	 *  */
 	public void turnTo(double angle) {
 		stop();
+		leftMotor.setSpeed(ROTATE_SPEED);
+		rightMotor.setSpeed(ROTATE_SPEED);
 		double currentAngle = odometer.getXYT()[2];
 		double angleDif = angle - currentAngle;
 
@@ -156,7 +137,7 @@ public class Navigation {
 			angleDif *= 1;
 			angleDif = (360 - angle) + currentAngle;
 		}
-		else if(angleDif < 180) {
+		else if(angleDif < -180) {
 			angleDif *= -1;
 			angleDif = (360 - currentAngle) + angle;
 		}

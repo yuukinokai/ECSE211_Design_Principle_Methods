@@ -9,7 +9,7 @@ import lejos.hardware.Button;
 /**
  * This class implements the Wall Follower for Lab1 on the EV3 platform.
  * 
- * @author Sophie and Edris
+ * @author Sophie Deng
  */
 
 public class WallFollowingLab {

@@ -5,7 +5,7 @@ import lejos.hardware.motor.EV3LargeRegulatedMotor;
 /**
  * This class implements the Wall Follower for Lab1 on the EV3 platform in PController.
  * 
- * @author Sophie and Edris
+ * @author Sophie Deng
  */
 
 public class PController implements UltrasonicController {

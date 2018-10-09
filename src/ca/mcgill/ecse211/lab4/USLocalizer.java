@@ -1,5 +1,7 @@
 package ca.mcgill.ecse211.lab4;
 
+import ca.mcgill.ecse211.odometer.*;
+import lejos.hardware.Sound;
 import lejos.hardware.motor.EV3LargeRegulatedMotor;
 import lejos.robotics.SampleProvider;
 
@@ -15,15 +17,16 @@ public class USLocalizer {
 	private float[] usData;
 	private Navigation navigation;
 
-	private static final int ROTATE_SPEED = 90;
-	private static final double WALLDISTANCE = 30;
+	private static final int ROTATE_SPEED = 50;
+	private static final double WALLDISTANCE = 35;
 	private static final double NOISE = 3;
 
 	/**
 	 * Constructor
+	 * @throws OdometerExceptions 
 	 */
-	public USLocalizer(Odometer odo, SampleProvider usSensor, float[] usData, Navigation nav){
-		this.odo = odo;
+	public USLocalizer(SampleProvider usSensor, float[] usData, Navigation nav) throws OdometerExceptions{
+		this.odo = Odometer.getOdometer();
 		this.usSensor = usSensor;
 		this.usData = usData;
 		this.navigation = nav;
@@ -34,7 +37,7 @@ public class USLocalizer {
 	 * @param true for rising edge, false for falling edge
 	 */
 	public void doLocalization(boolean risingEdge) {
-		double angleA, angleB, angleZero;
+		double angleA, angleB, angleZero; //angleA is the backwall and angleB is the side wall and angleZero is the offset
 		//get the two angles
 		if(risingEdge) {
 			angleA = getAngleARisingEdge();
@@ -43,7 +46,6 @@ public class USLocalizer {
 		else {
 			angleA = getAngleAFallingEdge();
 			angleB = getAngleBFallingEdge();
-
 		}
 		//get offset angle
 		angleZero = getAngleZero(angleA, angleB);
@@ -62,76 +64,104 @@ public class USLocalizer {
 
 	/**
 	 * get angleA for rising edge
+	 * @return
 	 */
 	private double getAngleARisingEdge() {
-		while(getDistance() > WALLDISTANCE + NOISE) {
-			//rotate robot counterclockwise
-			navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		//rotate robot counterclockwise until it sees a wall
+		navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		while(true) {
+			if(getDistance() <= WALLDISTANCE + NOISE) {
+				Sound.buzz();
+				break;
+			}
 		}
-		while(getDistance() < WALLDISTANCE) {
-			//rotate robot
-			navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		
+		while(true) {
+			if(getDistance() > WALLDISTANCE) {
+				Sound.buzz();
+				navigation.stop();
+				break;
+			}
 		}
-
-		//stop
-		navigation.stop();
+		//return back wall angle
 		return odo.getXYT()[2];
 	}
 	/**
 	 * get angleB for rising edge
+	 * @return
 	 */
 	private double getAngleBRisingEdge() {
-		while(getDistance() > WALLDISTANCE + NOISE) {
-			//rotate robot clockwise
-			navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		//rotate clockwise until it sees a wall
+		navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		while(true) {
+			if(getDistance() <= WALLDISTANCE + NOISE) {
+				Sound.buzz();
+				break;
+			}
 		}
-		while(getDistance() < WALLDISTANCE) {
-			//rotate robot
-			navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		
+		while(true) {
+			if(getDistance() > WALLDISTANCE) {
+				Sound.buzz();
+				navigation.stop();
+				break;
+			}
 		}
-
-		//stop
-		navigation.stop();
-
+		//returns side wall angle
 		return odo.getXYT()[2];
 	}
 	/**
 	 * get angleA for falling edge
+	 * @return
 	 */
 	private double getAngleAFallingEdge() {
-		while(getDistance() < WALLDISTANCE + NOISE) {
-			//rotate robot clockwise
-			navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		//rotate clockwise until it doesn't sees a wall
+		navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		while(true) {
+			if(getDistance() > WALLDISTANCE + NOISE) {
+				Sound.buzz();
+				break;
+			}
 		}
-		while(getDistance() > WALLDISTANCE) {
-			//rotate robot
-			navigation.rotateWheels(ROTATE_SPEED, -ROTATE_SPEED);
+		
+		while(true) {
+			if(getDistance() <= WALLDISTANCE) {
+				Sound.buzz();
+				navigation.stop();
+				break;
+			}
 		}
-
-		//stop
-		navigation.stop();
+		//returns back wall angle
 		return odo.getXYT()[2];
 	}
 	/**
 	 * get angleB for falling edge
+	 * @return
 	 */
 	private double getAngleBFallingEdge() {
-		while(getDistance() < WALLDISTANCE + NOISE) {
-			//rotate robot counterclockwise
-			navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		//rotate counterclockwise until it doesn't sees a wall
+		navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		while(true) {
+			if(getDistance() > WALLDISTANCE + NOISE) {
+				Sound.buzz();
+				break;
+			}
 		}
-		while(getDistance() > WALLDISTANCE) {
-			//rotate robot
-			navigation.rotateWheels(-ROTATE_SPEED, ROTATE_SPEED);
+		
+		while(true) {
+			if(getDistance() <= WALLDISTANCE) {
+				Sound.buzz();
+				navigation.stop();
+				break;
+			}
 		}
-
-		//stop
-		navigation.stop();
+		//returns side wall angle
 		return odo.getXYT()[2];
 	}
 
 	/**
-	 * get distance from the ultrasonic sensor
+	 * get distance from the wall with ultrasonic sensor
+	 * @return
 	 */
 	private float getDistance() {
 		usSensor.fetchSample(usData, 0);
@@ -141,10 +171,12 @@ public class USLocalizer {
 
 	/**
 	 * get offset angle
+	 * @param angle of backwall, angle of side wall
+	 * @return
 	 */
 	private double getAngleZero(double angleA, double angleB) {
 		double angleZero = 0;
-		if(angleA > angleB) {
+		if(angleA < angleB) {
 			angleZero = 255 - (angleA + angleB)/2.0;
 		}
 		else {

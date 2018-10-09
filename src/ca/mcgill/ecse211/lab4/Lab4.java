@@ -2,7 +2,6 @@
 package ca.mcgill.ecse211.lab4;
 
 import ca.mcgill.ecse211.odometer.*;
-import ca.mcgill.ecse211.lab3.Display;
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
 import lejos.hardware.lcd.TextLCD;
@@ -56,9 +55,9 @@ public class Lab4 {
 		int buttonChoice;
 
 		// Odometer related objects
-		Odometer odometer = Odometer.getOdometer(leftMotor, rightMotor, TRACK, WHEEL_RAD); 
-		//OdometryCorrection odometryCorrection = new OdometryCorrection();
-		Display odometryDisplay = new Display(lcd); // No need to change
+		final Odometer odometer = Odometer.getOdometer(leftMotor, rightMotor, TRACK, WHEEL_RAD); 
+
+		final Display odometryDisplay = new Display(lcd);
 
 
 		do {
@@ -76,18 +75,25 @@ public class Lab4 {
 		} while (buttonChoice != Button.ID_LEFT && buttonChoice != Button.ID_RIGHT);
 
 		if (buttonChoice == Button.ID_LEFT) {
-//			// Float the motors
-//			leftMotor.forward();
-//			leftMotor.flt();
-//			rightMotor.forward();
-//			rightMotor.flt();
-			
+			// Float the motors
+			//			leftMotor.forward();
+			//			leftMotor.flt();
+			//			rightMotor.forward();
+			//			rightMotor.flt();
+			Thread odoThread = new Thread(odometer);
+			odoThread.start();
+			Thread odoDisplayThread = new Thread(odometryDisplay);
+			odoDisplayThread.start();
+
 			Navigation navigation = new Navigation(leftMotor, rightMotor, WHEEL_RAD, TRACK);
 			
+			//test the angles
 			navigation.turnTo(270);
 			navigation.turnTo(135);
 			navigation.turnTo(0);
 			navigation.turnTo(45);
+
+
 
 		} else {
 			// clear the display
@@ -97,7 +103,7 @@ public class Lab4 {
 			lcd.drawString("rising | falling", 0, 2);
 			lcd.drawString("edge   | edge   ", 0, 3);
 			int buttonWait = Button.waitForAnyPress();
-			
+
 			// Start odometer and display threads
 			Thread odoThread = new Thread(odometer);
 			odoThread.start();
@@ -107,112 +113,91 @@ public class Lab4 {
 
 
 			if (buttonWait == Button.ID_LEFT) {
-				// spawn a new Thread to avoid Navigation from blocking
-				(new Thread() {
+				lcd.clear();
+				Navigation navigation = new Navigation(leftMotor, rightMotor, WHEEL_RAD, TRACK);
 
-					/** Does the localization in rising edge
-					 *
-					 */
-					public void run() {
+				//USLocalization
+				USLocalizer usLoc = new USLocalizer(usDistance, usData, navigation);
+				usLoc.doLocalization(true);
 
-						try {
-							Navigation navigation = new Navigation(leftMotor, rightMotor, WHEEL_RAD, TRACK);
+				int buttonAngle = Button.waitForAnyPress();
 
-							//USLocalization
-							USLocalizer usLoc = new USLocalizer(odometer, usDistance, usData, navigation);
-							usLoc.doLocalization(true);
+				//move to 0,0
+				boolean noLineH = true;
+				lcd.clear();
+				navigation.moveForward();
+				while(noLineH) {
 
-							int buttonAngle = Button.waitForAnyPress();
-
-							//move to 0,0
-							boolean noLineH = true;
-
-							while(noLineH) {
-								navigation.moveForward();
-								usIntensity.fetchSample(sampleColor, 0);
-								float intensity = sampleColor[0];
-								if(intensity < 0.4) {
-									navigation.stop();
-									noLineH = false;
-								}
-							}
-
-							navigation.turnTo(90);
-
-							boolean noLineV = true;
-							while(noLineV) {
-								navigation.moveForward();
-								usIntensity.fetchSample(sampleColor, 0);
-								float intensity = sampleColor[0];
-								if(intensity < 0.4) {
-									navigation.stop();
-									noLineV = false;
-								}
-							}
-
-
-							//do light localizer
-
-
-						} catch (OdometerExceptions e) {
-							e.printStackTrace();
-						}
-
+					usIntensity.fetchSample(sampleColor, 0);
+					float intensity = sampleColor[0]*100;
+					//System.out.println(intensity);
+					if(intensity < 33) {
+						navigation.stop();
+						noLineH = false;
 					}
-				}).start();
+				}
+
+				navigation.turnTo(90);
+
+				boolean noLineV = true;
+				navigation.moveForward();
+				while(noLineV) {
+					usIntensity.fetchSample(sampleColor, 0);
+					float intensity = sampleColor[0]*100;
+					if(intensity < 33) {
+						navigation.stop();
+						noLineV = false;
+					}
+				}
+
+				navigation.turnTo(0);
+				//do light localizer
+
+				LightLocalizer lightLoc = new LightLocalizer(usIntensity, sampleColor, navigation);
+				lightLoc.doLocalization();
+
 			}
 			else {
-				// spawn a new Thread to avoid Navigation from blocking
-				(new Thread() {
 
-					/** Does the localization in falling edge
-					 *
-					 */
-					public void run() {
-						try {
-							Navigation navigation = new Navigation(leftMotor, rightMotor, WHEEL_RAD, TRACK);
+				Navigation navigation = new Navigation(leftMotor, rightMotor, WHEEL_RAD, TRACK);
 
-							//USLocalization
-							USLocalizer usLoc = new USLocalizer(odometer, usDistance, usData, navigation);
-							usLoc.doLocalization(false);
+				//USLocalization
+				USLocalizer usLoc = new USLocalizer(usDistance, usData, navigation);
+				usLoc.doLocalization(false);
 
-							int buttonAngle = Button.waitForAnyPress();
+				int buttonAngle = Button.waitForAnyPress();
 
-							//move to 0,0
-							boolean noLineH = true;
+				//move to 0,0
+				boolean noLineH = true;
+				lcd.clear();
+				navigation.moveForward();
+				while(noLineH) {
 
-							while(noLineH) {
-								navigation.moveForward();
-								usIntensity.fetchSample(sampleColor, 0);
-								float intensity = sampleColor[0];
-								if(intensity < 0.4) {
-									navigation.stop();
-									noLineH = false;
-								}
-							}
-
-							navigation.turnTo(90);
-
-							boolean noLineV = true;
-							while(noLineV) {
-								navigation.moveForward();
-								usIntensity.fetchSample(sampleColor, 0);
-								float intensity = sampleColor[0];
-								if(intensity < 0.4) {
-									navigation.stop();
-									noLineV = false;
-								}
-							}
-
-							//do light localizer
-
-
-						} catch (OdometerExceptions e) {
-							e.printStackTrace();
-						}
-
+					usIntensity.fetchSample(sampleColor, 0);
+					float intensity = sampleColor[0]*100;
+					System.out.println(intensity);
+					if(intensity < 33) {
+						navigation.stop();
+						noLineH = false;
 					}
-				}).start();
+				}
+
+				navigation.turnTo(90);
+
+				boolean noLineV = true;
+				navigation.moveForward();
+				while(noLineV) {
+					usIntensity.fetchSample(sampleColor, 0);
+					float intensity = sampleColor[0]*100;
+					if(intensity < 33) {
+						navigation.stop();
+						noLineV = false;
+					}
+				}
+
+				//do light localizer
+				LightLocalizer lightLoc = new LightLocalizer(usIntensity, sampleColor, navigation);
+				lightLoc.doLocalization();
 			}
 
 

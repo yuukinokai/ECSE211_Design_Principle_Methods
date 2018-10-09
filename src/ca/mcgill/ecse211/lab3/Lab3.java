@@ -73,6 +73,10 @@ public class Lab3 {
 			rightMotor.flt();
 
 			// Display changes in position as wheels are (manually) moved
+			Thread odoThread = new Thread(odometer);
+			odoThread.start();
+			Thread odoDisplayThread = new Thread(odometryDisplay);
+			odoDisplayThread.start();
 
 		} else {
 			// clear the display

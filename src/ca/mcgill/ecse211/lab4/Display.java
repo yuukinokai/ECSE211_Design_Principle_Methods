@@ -70,5 +70,10 @@ public class Display implements Runnable {
 		} while ((updateEnd - tStart) <= timeout);
 
 	}
+	
+	public void display(float data) {
+		lcd.clear();
+		lcd.drawString("" + data, 0, 0);
+	}
 
 }
